@@ -1,12 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { products, getProductsByCategory } from "@/data/products";
+import { getProducts } from "@/services/api";
 
 interface CartItem {
   productId: number;
   quantity: number;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  content: string;
+  image: string;
+  actualPrice: number;
+  price: number;
+  discount: number;
 }
 
 interface ProductTableProps {
@@ -16,8 +26,19 @@ interface ProductTableProps {
 }
 
 const ProductTable = ({ selectedCategory, cart, setCart }: ProductTableProps) => {
-  const categoryProducts = selectedCategory === "All" ? products : getProductsByCategory(selectedCategory);
-  
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    getProducts()
+      .then(data => {
+        setProducts(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [selectedCategory]);
+
   const updateQuantity = (productId: number, newQuantity: number) => {
     if (newQuantity < 0) return;
     
@@ -62,7 +83,15 @@ const ProductTable = ({ selectedCategory, cart, setCart }: ProductTableProps) =>
     }, 0);
   };
 
-  if (categoryProducts.length === 0) {
+  if (loading) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Loading products...</p>
+      </div>
+    );
+  }
+
+  if (products.length === 0) {
     return (
       <div className="text-center py-8">
         <p className="text-muted-foreground">No products found in this category.</p>
@@ -70,7 +99,7 @@ const ProductTable = ({ selectedCategory, cart, setCart }: ProductTableProps) =>
     );
   }
 
-  const discountPercentage = categoryProducts[0]?.discount || 80;
+  const discountPercentage = products[0]?.discount || 80;
 
   return (
     <div className="space-y-4">
@@ -96,7 +125,7 @@ const ProductTable = ({ selectedCategory, cart, setCart }: ProductTableProps) =>
 
         {/* Table Body */}
         <div className="divide-y">
-          {categoryProducts.map((product, index) => {
+          {products.map((product, index) => {
             const quantity = getQuantity(product.id);
             const isEven = index % 2 === 0;
             
